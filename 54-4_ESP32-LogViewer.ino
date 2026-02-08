@@ -58,6 +58,7 @@ typedef struct {
     lv_color_t log_txt;
     lv_color_t clock_border;
     lv_color_t clock_tick;
+    lv_color_t clock_needle;
     lv_color_t title_txt;
 } Theme_t;
 
@@ -66,7 +67,7 @@ static const Theme_t theme_dark = {
     .top_lbl = lv_color_hex(0xB3B3B3), .top_num = lv_color_hex(0xFFFFFF), .top_unit = lv_color_hex(0x999999),
     .bot_lbl = lv_color_hex(0x00B300), .bot_num = lv_color_hex(0x00FF00),
     .log_txt = lv_color_hex(0x00FF00),
-    .clock_border = lv_color_hex(0x008000), .clock_tick = lv_color_hex(0x008000),
+    .clock_border = lv_color_hex(0x008000), .clock_tick = lv_color_hex(0x008000), .clock_needle = lv_color_hex(0x00FF00),
     .title_txt = lv_color_hex(0x00BFFF)
 };
 
@@ -75,7 +76,7 @@ static const Theme_t theme_light = {
     .top_lbl = lv_color_hex(0x333333), .top_num = lv_color_hex(0x000000), .top_unit = lv_color_hex(0x555555),
     .bot_lbl = lv_color_hex(0x005500), .bot_num = lv_color_hex(0x00AA00),
     .log_txt = lv_color_hex(0x000000),
-    .clock_border = lv_color_hex(0x444444), .clock_tick = lv_color_hex(0x444444),
+    .clock_border = lv_color_hex(0x444444), .clock_tick = lv_color_hex(0x444444), .clock_needle = lv_color_hex(0xFF0000),
     .title_txt = lv_color_hex(0x0055FF)
 };
 
@@ -88,19 +89,44 @@ static const Theme_t *curr_theme = &theme_dark;
 #define COLOR_BOT_LABEL (curr_theme->bot_lbl)
 #define COLOR_BOT_NUM   (curr_theme->bot_num)
 
+// Helper to create/recreate clock
+void create_clock_meter() {
+    if(clock_meter) {
+        lv_obj_del(clock_meter);
+        clock_meter = NULL;
+    }
+    
+    clock_meter = lv_meter_create(lv_scr_act());
+    lv_obj_set_size(clock_meter, 115, 115);
+    lv_obj_set_pos(clock_meter, 356, 110);
+    lv_obj_set_style_bg_opa(clock_meter, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(clock_meter, 1, 0);
+    lv_obj_set_style_border_color(clock_meter, curr_theme->clock_border, 0);
+    lv_obj_set_style_text_opa(clock_meter, LV_OPA_0, LV_PART_TICKS); // Hide numbers
+
+    scale = lv_meter_add_scale(clock_meter);
+    lv_meter_set_scale_ticks(clock_meter, scale, 61, 0, 0, curr_theme->clock_tick);
+    lv_meter_set_scale_major_ticks(clock_meter, scale, 15, 4, 15, curr_theme->clock_tick, 10);
+    lv_meter_set_scale_range(clock_meter, scale, 0, 600, 360, 270);
+
+    lv_obj_add_flag(clock_meter, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(clock_meter, screen_touch_cb, LV_EVENT_CLICKED, NULL);
+
+    needle_hr = lv_meter_add_needle_line(clock_meter, scale, 3, curr_theme->clock_needle, -10);
+    needle_min = lv_meter_add_needle_line(clock_meter, scale, 2, curr_theme->clock_needle, -5);
+    needle_sec = lv_meter_add_needle_line(clock_meter, scale, 1, curr_theme->clock_needle, 0);
+}
+
 void update_theme() {
     curr_theme = is_dark ? &theme_dark : &theme_light;
     lv_obj_set_style_bg_color(lv_scr_act(), curr_theme->bg, 0);
     if(lbl_title) lv_obj_set_style_text_color(lbl_title, curr_theme->title_txt, 0);
     if(lbl_time) lv_obj_set_style_text_color(lbl_time, curr_theme->top_num, 0);
     if(lbl_log) lv_obj_set_style_text_color(lbl_log, curr_theme->log_txt, 0);
-    if(clock_meter) {
-        lv_obj_set_style_border_color(clock_meter, curr_theme->clock_border, 0);
-        if(scale) {
-            lv_meter_set_scale_ticks(clock_meter, scale, 61, 0, 0, curr_theme->clock_tick);
-            lv_meter_set_scale_major_ticks(clock_meter, scale, 15, 4, 15, curr_theme->clock_tick, 10);
-        }
-    }
+    
+    // Recreate clock with new colors
+    create_clock_meter();
+    
     lSys = 0; lWeather = 0;
     lv_obj_invalidate(lv_scr_act());
 }
@@ -361,34 +387,8 @@ void setup() {
     lv_obj_set_style_text_line_space(lbl_log, 1, 0);
     lv_label_set_text(lbl_log, disp_buf);
 
-    // Analog clock on the right (below top area)
-    clock_meter = lv_meter_create(lv_scr_act());
-    lv_obj_set_size(clock_meter, 115, 115);
-    lv_obj_set_pos(clock_meter, 356, 110);
-    lv_obj_set_style_bg_opa(clock_meter, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(clock_meter, 1, 0);
-    lv_obj_set_style_border_color(clock_meter, curr_theme->clock_border, 0);
-    lv_obj_set_style_text_opa(clock_meter, LV_OPA_0, LV_PART_TICKS);  // Hide numbers
-
-    scale = lv_meter_add_scale(clock_meter);
-    lv_meter_set_scale_ticks(clock_meter, scale, 61, 0, 0, curr_theme->clock_tick);
-    lv_meter_set_scale_major_ticks(clock_meter, scale, 15, 4, 15, curr_theme->clock_tick, 10);
-    lv_meter_set_scale_range(clock_meter, scale, 0, 600, 360, 270);
-
-    // Touch event setup for all interactive areas
-    lv_obj_add_flag(lv_scr_act(), LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(lv_scr_act(), screen_touch_cb, LV_EVENT_CLICKED, NULL);
-
-    // Also attach to log container and clock so they don't consume the event without action
-    lv_obj_add_flag(log_cont, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(log_cont, screen_touch_cb, LV_EVENT_CLICKED, NULL);
-
-    lv_obj_add_flag(clock_meter, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(clock_meter, screen_touch_cb, LV_EVENT_CLICKED, NULL);
-
-    needle_hr = lv_meter_add_needle_line(clock_meter, scale, 3, lv_color_hex(0x00FF00), -10);
-    needle_min = lv_meter_add_needle_line(clock_meter, scale, 2, lv_color_hex(0x00FF00), -5);
-    needle_sec = lv_meter_add_needle_line(clock_meter, scale, 1, lv_color_hex(0x00FF00), 0);
+    // Initial clock create
+    create_clock_meter();
 
     bsp_display_unlock();
 

@@ -7,3 +7,4 @@ build-esp32s3-debug/
 
 # Added by ggshield
 .cache_ggshield
+secrets.h

@@ -1,7 +1,7 @@
 # 📟 ESP32 Log Viewer (Real-Time System Monitor)
 
 ESP32-S3의 모든 시스템 로그(ESP_LOG) 및 시리얼 출력을 3.5인치 QSPI LCD 화면에 **실시간 터미널** 형태로 보여주는 고성능 모니터링 프로젝트입니다.
-`Serial.print` 뿐만 아니라 ESP-IDF 내부의 운영체제(FreeRTOS) 로그, Wi-Fi 상태, 메모리 할당 내역까지 모두 화면에 출력됩니다.
+**화면을 터치하면 다크 모드와 라이트 모드가 전환됩니다.**
 
 ![Screenshot](screenshot.png)
 
@@ -10,29 +10,27 @@ ESP32-S3의 모든 시스템 로그(ESP_LOG) 및 시리얼 출력을 3.5인치 Q
 ### 1. 🖥️ 실시간 로그 리다이렉션 (Real-time Log Redirection)
 
 - **ESP_LOG Hook**: `esp_log_set_vprintf` API를 활용하여 ESP32의 표준 입출력을 가로채 LCD로 전달합니다.
-- **Terminal UI**: 해커 스타일의 **Dark Mode (0x000000)** 배경과 **Matrix Green (0x00FF00)** 텍스트.
-- **Auto Scroll**: 새로운 로그가 도착하면 자동으로 화면 최하단으로 스크롤되며, 링 버퍼를 통해 메모리를 효율적으로 관리합니다.
+- **Terminal UI**: 시스템 로그가 링 버퍼에 저장되어 자동으로 스크롤되며 표시됩니다.
+- **Auto Scroll**: 새로운 로그 수신 시 화면 최하단으로 자동 이동.
 
-### 2. 📊 시스템 모니터링 (System Stats)
+### 2. 🎨 터치 테마 전환 (Touch Theme Switching)
 
-- **Memory Analysis**:
-  - `Heap`: 실시간 가용 힙 메모리 (SRAM)
-  - `MinHeap`: 부팅 후 최저 가용 메모리 (메모리 누수 확인용)
-  - `Internal / PSRAM`: 내부 SRAM과 외부 PSRAM 사용량을 분리하여 추적
-- **Network Status**:
-  - `RSSI`: Wi-Fi 신호 강도 (dBm) 실시간 표시
-  - `Uptime`: 시스템 가동 시간 (시:분:초)
+- **Dark Mode**: 해커 스타일의 리얼 블랙(0x000000) 배경 + 형광 녹색 텍스트.
+- **Light Mode**: 깔끔한 화이트(0xE0E0E0) 배경 + 다크 그레이 텍스트.
+- **Interaction**: 화면의 **아무 곳이나 터치**하면 즉시 테마가 전환됩니다.
+- **Dynamic Styling**: 시계 바늘, 테두리, 텍스트 색상이 테마에 맞춰 실시간으로 변경됩니다.
 
-### 3. ☁️ 날씨 및 시간 정보 (Environment Info)
+### 3. ⏱️ 고정밀 아날로그 시계 (Precision Analog Clock)
 
-- **NTP Time Sync**: `pool.ntp.org`를 통해 인터넷 시간을 받아와 정확한 시각을 표시합니다.
-- **Analog & Digital Clock**: LVGL Meter 위젯을 활용한 아날로그 시계와 디지털 시계 동시 제공.
-- **OpenWeatherMap Integration**: 서울(Seoul) 기준 실시간 기온, 체감온도, 습도, 풍속 정보를 API로 받아와 표시합니다.
+- **Smooth Movement**: 시침 위치를 분 단위로 정밀하게 계산하여(0~600 resolution) 부드러운 움직임을 구현했습니다.
+- **Minimalist Design**: 숫자와 자잘한 눈금을 제거하고 12, 3, 6, 9시 방향의 포인트만 강조한 모던한 디자인.
+- **Dimmed Style**: 눈부심 방지를 위해 시계 테두리와 눈금 밝기를 50%로 조정.
 
-### 4. 🛡️ 안정성 설계 (Robustness)
+### 4. 📊 시스템 및 환경 정보
 
-- **Thread Safety**: LVGL 렌더링 루프와 백그라운드 데이터 작업 간의 충돌 방지를 위해 Mutex (`bsp_display_lock`) 적용.
-- **Memory Safety**: 로그 버퍼가 가득 차면 오래된 로그부터 자동 삭제하여 오버플로우 방지.
+- **Memory**: Heap, MinHeap, PSRAM 사용량을 실시간 모니터링.
+- **Network**: Wi-Fi RSSI 신호 강도 표시.
+- **Environment**: OpenWeatherMap API를 연동하여 서울의 실시간 날씨(기온, 체감온도, 습도, 풍속) 표시.
 
 ---
 
@@ -47,7 +45,7 @@ ESP32-S3의 모든 시스템 로그(ESP_LOG) 및 시리얼 출력을 3.5인치 Q
 | **PSRAM**      | 8MB (OPI)     | Octal SPI RAM for LVGL buffer & logging |
 | **Display**    | 3.5" IPS LCD  | 480x320 Resolution                      |
 | **Controller** | AXS15231B     | QSPI Interface Supported                |
-| **Touch**      | GT911         | I2C Capacitive Touch (예정)             |
+| **Touch**      | GT911         | I2C Capacitive Touch                    |
 
 ---
 
@@ -88,38 +86,17 @@ _(포트명 `/dev/cu.usbmodem...`은 본인의 환경에 맞게 변경하세요)
 arduino-cli upload -p /dev/cu.usbmodem2101 --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,PSRAM=opi .
 ```
 
-### 2. 라이브러리 의존성
-
-이 프로젝트는 다음 라이브러리를 필요로 합니다.
-
-- **LVGL**: v8.3.x (그래픽 엔진)
-- **ESP32 Board Package**: v2.0.11 이상
-
 ---
 
 ## 📝 개발자 노트 (Dev Notes)
 
-### 로그 리다이렉션 원리
+### 동적 테마 구현
 
-`esp_log_set_vprintf` 함수를 사용하여 ESP32 시스템 레벨에서 발생하는 모든 로그(`ESP_LOGI`, `ESP_LOGE` 등)를 가로챕니다. 가로챈 로그는 `vprintf_to_lvgl` 콜백 함수를 통해 FreeRTOS Queue에 저장되고, 메인 루프에서 안전하게 LVGL 텍스트 영역(Text Area)에 렌더링 됩니다.
+LVGL 객체(Meter 등)의 스타일을 런타임에 변경하기 위해, 테마 전환 시 시계 객체(`clock_meter`)를 삭제하고 재생성(`create_clock_meter`)하는 방식을 사용했습니다. 이는 `Needle`과 같은 내부 구성 요소의 색상을 동적으로 바꾸는 가장 확실한 방법입니다.
 
-```cpp
-// 로그 훅(Hook) 등록
-esp_log_set_vprintf(vprintf_to_lvgl);
-```
+### 로그 리다이렉션
 
-### 디렉토리 구조
-
-```
-.
-├── 54-4_ESP32-LogViewer.ino  # 메인 소스 코드
-├── display.h                 # 디스플레이 설정 헤더
-├── esp_bsp.c / .h            # 보드 지원 패키지 (초기화)
-├── esp_lcd_axs15231b.c / .h  # AXS15231B 드라이버
-├── lv_conf.h                 # LVGL 설정 파일
-├── lv_port.c / .h            # LVGL 포팅 계층
-└── emulator.html             # (Optional) 웹 시뮬레이터
-```
+`esp_log_set_vprintf` 함수를 사용하여 시스템 레벨 로그를 가로채고, FreeRTOS Queue를 통해 UI 스레드로 안전하게 전달합니다.
 
 ---
 

@@ -15,12 +15,14 @@
 #include <time.h>
 #include <HTTPClient.h>
 
-const char* ssid     = "YOUR_WIFI_SSID";
-const char* password = "YOUR_WIFI_PASSWORD";
+#include "secrets.h"
+
+const char* ssid     = WIFI_SSID;
+const char* password = WIFI_PASS;
 const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 3600 * 9;
 const int   daylightOffset_sec = 0;
-const char* OWM_KEY = "YOUR_OWM_API_KEY";
+const char* OWM_KEY = OWM_API_KEY;
 const char* OWM_URL = "http://api.openweathermap.org/data/2.5/weather?lat=37.5665&lon=126.9780&units=metric&lang=en&appid=";
 
 // Set to 1 to re-enable the old demo log spam after boot.
@@ -389,6 +391,15 @@ void setup() {
 
     // Initial clock create
     create_clock_meter();
+
+    // Register touch event for all visible objects
+    lv_obj_t* clickables[] = { lv_scr_act(), log_cont, lbl_title, lbl_time, box_time, lbl_sys, lbl_weather, lbl_log };
+    for(size_t i=0; i<sizeof(clickables)/sizeof(clickables[0]); i++) {
+        if(clickables[i]) {
+            lv_obj_add_flag(clickables[i], LV_OBJ_FLAG_CLICKABLE);
+            lv_obj_add_event_cb(clickables[i], screen_touch_cb, LV_EVENT_CLICKED, NULL);
+        }
+    }
 
     bsp_display_unlock();
 

@@ -9,15 +9,27 @@
       rel="stylesheet"
     />
     <style>
-      :root {
-        --bg-color: #1a1a1a;
-        --device-frame: #333;
+      /* Theme Variables */
+      body {
         --screen-bg: #000;
-        --text-green: #00ff00;
-        --text-dark-green: #00b300;
-        --text-white: #ffffff;
-        --text-gray: #b3b3b3;
-        --text-unit: #999999;
+        --screen-text: #b3b3b3;
+        --screen-num: #fff;
+        --screen-unit: #999;
+        --log-text: #00ff00;
+        --clock-border: #008000;
+        --clock-needle: #00ff00;
+        --title-text: #00bfff;
+      }
+
+      body.light-mode {
+        --screen-bg: #e0e0e0;
+        --screen-text: #333;
+        --screen-num: #000;
+        --screen-unit: #555;
+        --log-text: #000;
+        --clock-border: #444;
+        --clock-needle: #ff0000;
+        --title-text: #0055ff;
       }
 
       body {
@@ -28,7 +40,7 @@
         align-items: center;
         justify-content: center;
         min-height: 100vh;
-        background-color: var(--bg-color);
+        background-color: #1a1a1a; /* Emulator Background */
         font-family: "Montserrat", sans-serif;
         color: white;
       }
@@ -60,12 +72,13 @@
       #screen {
         width: 480px;
         height: 320px;
-        background-color: #000;
+        background-color: var(--screen-bg);
         position: relative;
         overflow: hidden;
-        cursor: default;
+        cursor: pointer;
         user-select: none;
         border: 1px solid #333;
+        transition: background-color 0.2s;
       }
 
       /* UI Components based on actual implementation */
@@ -76,7 +89,7 @@
         top: 2px;
         left: 8px;
         font-size: 20px;
-        color: #00bfff;
+        color: var(--title-text);
         font-weight: bold;
       }
 
@@ -86,7 +99,7 @@
         left: 250px;
         width: 120px;
         font-size: 16px;
-        color: var(--text-gray);
+        color: var(--screen-text);
       }
 
       /* Time Box (Top Right) */
@@ -101,7 +114,7 @@
 
       #lbl_time {
         font-size: 16px;
-        color: #ffffff;
+        color: var(--screen-num);
         white-space: pre-wrap;
       }
 
@@ -111,25 +124,23 @@
         top: 30px;
         left: 8px;
         width: 472px;
-        height: auto;
         font-size: 12px;
-        color: var(--text-gray);
+        color: var(--screen-text);
         display: flex;
         align-items: center;
-        gap: 8px;
         flex-wrap: wrap;
         row-gap: 4px;
       }
 
       .sys-val {
-        color: white;
+        color: var(--screen-num);
         font-size: 16px;
         margin-left: 2px;
       }
       .sys-unit {
-        color: var(--text-unit);
+        color: var(--screen-unit);
         margin-left: 1px;
-        margin-right: 4px;
+        margin-right: 8px;
       }
 
       /* Log Container (Main Area) */
@@ -146,7 +157,7 @@
 
       #lbl_log {
         font-size: 12px;
-        color: #00ff00;
+        color: var(--log-text);
         line-height: 1.25;
         white-space: pre-wrap;
         word-wrap: break-word;
@@ -159,9 +170,27 @@
         left: 356px;
         width: 115px;
         height: 115px;
-        border: 1px solid #00ff00;
+        border: 1px solid var(--clock-border);
         border-radius: 50%;
+        box-sizing: border-box;
       }
+
+      /* Simulated Major Ticks (12, 3, 6, 9) */
+      #clock_meter::before {
+        content: "";
+        position: absolute;
+        top: 50%; left: 0; right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, var(--clock-border) 10%, transparent 10%, transparent 90%, var(--clock-border) 90%);
+      }
+      #clock_meter::after {
+        content: "";
+        position: absolute;
+        top: 0; bottom: 0; left: 50%;
+        width: 1px;
+        background: linear-gradient(180deg, var(--clock-border) 10%, transparent 10%, transparent 90%, var(--clock-border) 90%);
+      }
+
 
       /* Simple CSS Analog Clock Hands */
       .hand {
@@ -169,24 +198,27 @@
         bottom: 50%;
         left: 50%;
         transform-origin: bottom center;
-        background: #00ff00;
+        background: var(--clock-needle);
         border-radius: 2px;
+        transition: background-color 0.2s;
       }
       .hand-hr {
         width: 4px;
         height: 30px;
         z-index: 3;
+        margin-left: -2px; 
       }
       .hand-min {
         width: 2px;
         height: 40px;
         z-index: 4;
+        margin-left: -1px;
       }
       .hand-sec {
         width: 1px;
         height: 50px;
         z-index: 5;
-        background: #00ff00;
+        margin-left: -0.5px;
       }
 
       /* Weather Info (Bottom Right) */
@@ -197,20 +229,16 @@
         width: 115px;
         height: 70px;
         font-size: 12px;
-        color: var(--text-dark-green);
+        color: var(--screen-text);
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
       }
 
-      .weather-row {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 2px;
-      }
       .w-val {
-        color: var(--text-green);
+        color: var(--screen-num);
         margin-left: 4px;
+        font-weight: bold;
       }
 
       /* Controls */
@@ -223,11 +251,11 @@
   </head>
   <body>
     <div class="header">
-      <h1>ESP32-S3 Log Viewer</h1>
+      <h1>ESP32-S3 Log Viewer Emulator</h1>
     </div>
 
     <div class="device-container">
-      <div id="screen">
+      <div id="screen" onclick="toggleTheme()">
         <!-- Row 1 -->
         <div id="lbl_title">ESP32-S3 MONITOR</div>
         <div id="lbl_uptime">
@@ -239,9 +267,11 @@
 
         <!-- Row 2: System Stats -->
         <div id="lbl_sys">
-          <span>Heap:</span><span class="sys-val">120,500</span><span class="sys-unit">B</span> <span>Min:</span><span class="sys-val">98,200</span><span class="sys-unit">B</span>
-          <div style="width: 100%"></div>
-          <span>PSRAM:</span><span class="sys-val">4,100,500</span><span class="sys-unit">B</span> <span>RSSI:</span><span class="sys-val">-65</span><span class="sys-unit">dBm</span>
+          <span>Heap:</span><span class="sys-val">120,500</span><span class="sys-unit">B</span> 
+          <span>Min:</span><span class="sys-val">98,200</span><span class="sys-unit">B</span>
+          <div style="width: 100%"></div> <!-- Line break -->
+          <span>PSRAM:</span><span class="sys-val">4,100,500</span><span class="sys-unit">B</span> 
+          <span>RSSI:</span><span class="sys-val">-65</span><span class="sys-unit">dBm</span>
         </div>
 
         <!-- Row 3: Log Area -->
@@ -258,7 +288,7 @@
 
         <!-- Bottom Right: Weather -->
         <div id="lbl_weather">
-          <div style="margin-bottom: 4px">
+          <div style="margin-bottom: 2px">
             Seoul, KR <span class="w-val">24.5 C</span>
           </div>
           <div>feel:<span class="w-val">26.0</span></div>
@@ -268,9 +298,20 @@
       </div>
     </div>
 
-    <div class="controls">* This is a visual simulation of the LVGL UI.</div>
+    <div class="controls">* Click screen to toggle Dark/Light mode.</div>
 
     <script>
+      // Theme Toggle Logic
+      let isDark = true;
+      function toggleTheme() {
+        isDark = !isDark;
+        if (isDark) {
+          document.body.classList.remove("light-mode");
+        } else {
+          document.body.classList.add("light-mode");
+        }
+      }
+
       // Simulation Logic
       const logEl = document.getElementById("lbl_log");
       const timeEl = document.getElementById("lbl_time");
@@ -343,7 +384,9 @@
 
         const secDeg = sec * 6; // 360 / 60
         const minDeg = min * 6 + sec * 0.1; // 360 / 60
-        const hrDeg = hr * 30 + min * 0.5; // 360 / 12
+        // Precise hour hand movement like C++ implementation
+        // (hr * 30) + (min * 0.5)
+        const hrDeg = hr * 30 + min * 0.5; 
 
         // Rotate hands
         handSec.style.transform = `rotate(${secDeg}deg)`;

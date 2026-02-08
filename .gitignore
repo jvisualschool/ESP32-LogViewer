@@ -1,0 +1,6 @@
+build-esp32s3-debug/
+.DS_Store
+*.log
+*.bin
+*.elf
+.claude/

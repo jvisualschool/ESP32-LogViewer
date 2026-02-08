@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ESP32-S3 LVGL UI Emulator</title>
+    <title>ESP32 Log Viewer Emulator</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap"
       rel="stylesheet"
@@ -13,6 +13,11 @@
         --bg-color: #1a1a1a;
         --device-frame: #333;
         --screen-bg: #000;
+        --text-green: #00ff00;
+        --text-dark-green: #00b300;
+        --text-white: #ffffff;
+        --text-gray: #b3b3b3;
+        --text-unit: #999999;
       }
 
       body {
@@ -24,10 +29,7 @@
         justify-content: center;
         min-height: 100vh;
         background-color: var(--bg-color);
-        font-family:
-          "Inter",
-          -apple-system,
-          sans-serif;
+        font-family: "Montserrat", sans-serif;
         color: white;
       }
 
@@ -39,18 +41,15 @@
       .header h1 {
         font-size: 1.5rem;
         margin-bottom: 0.5rem;
-        background: linear-gradient(90deg, #00bfff, #00ff00);
-        -webkit-background-clip: text;
-        background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: #00bfff;
       }
 
       /* Device Frame Styling */
       .device-container {
         position: relative;
-        padding: 40px 15px;
+        padding: 20px 60px; /* Landscape frame */
         background: #222;
-        border-radius: 40px;
+        border-radius: 30px;
         box-shadow:
           0 25px 50px -12px rgba(0, 0, 0, 0.5),
           inset 0 2px 4px rgba(255, 255, 255, 0.1);
@@ -62,197 +61,295 @@
         width: 480px;
         height: 320px;
         background-color: #000;
-        border-radius: 4px;
         position: relative;
         overflow: hidden;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
+        cursor: default;
         user-select: none;
+        border: 1px solid #333;
       }
 
-      /* UI Elements */
-      .lv-label {
+      /* UI Components based on actual implementation */
+
+      /* Top Bar */
+      #lbl_title {
         position: absolute;
-        font-family: "Montserrat", sans-serif;
-        text-align: center;
-        width: 100%;
-        transition: color 0.3s ease;
-      }
-
-      #hello-label {
-        top: 20px;
-        font-size: 48px;
+        top: 2px;
+        left: 8px;
+        font-size: 20px;
+        color: #00bfff;
         font-weight: bold;
       }
 
-      #title-label {
-        top: 120px;
-        font-size: 32px;
-      }
-
-      #ok-icon {
-        top: 180px;
-        font-size: 48px;
-      }
-
-      #status-label {
-        top: 240px;
-        font-size: 14px;
-      }
-
-      #dev-info {
-        bottom: 20px;
+      #lbl_uptime {
+        position: absolute;
+        top: 6px;
+        left: 250px;
+        width: 120px;
         font-size: 16px;
+        color: var(--text-gray);
       }
 
-      .lv-line {
+      /* Time Box (Top Right) */
+      #box_time {
         position: absolute;
-        bottom: 60px;
-        left: 40px;
-        right: 40px;
-        height: 2px;
-        background-color: #444;
-        transition: background-color 0.3s ease;
+        top: 8px;
+        left: 356px;
+        width: 120px;
+        height: 44px;
+        text-align: right;
       }
 
-      /* Hardware Details */
-      .cam-lens {
+      #lbl_time {
+        font-size: 16px;
+        color: #ffffff;
+        white-space: pre-wrap;
+      }
+
+      /* System Info (Row 2) */
+      #lbl_sys {
         position: absolute;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 10px;
-        height: 10px;
-        background: #111;
-        border-radius: 50%;
-        box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.2);
-      }
-
-      .controls {
-        margin-top: 2rem;
+        top: 30px;
+        left: 8px;
+        width: 472px;
+        height: auto;
+        font-size: 12px;
+        color: var(--text-gray);
         display: flex;
-        gap: 1rem;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        row-gap: 4px;
       }
 
-      .info-card {
-        background: rgba(255, 255, 255, 0.05);
-        padding: 1rem;
-        border-radius: 12px;
+      .sys-val {
+        color: white;
+        font-size: 16px;
+        margin-left: 2px;
+      }
+      .sys-unit {
+        color: var(--text-unit);
+        margin-left: 1px;
+        margin-right: 4px;
+      }
+
+      /* Log Container (Main Area) */
+      #log_cont {
+        position: absolute;
+        top: 92px;
+        left: 4px;
+        width: 362px;
+        height: 228px;
+        overflow-y: hidden; /* Auto scroll implemented in JS */
+        font-family: monospace;
+        background: transparent;
+      }
+
+      #lbl_log {
+        font-size: 12px;
+        color: #00ff00;
+        line-height: 1.25;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+
+      /* Analog Clock (Right Middle) */
+      #clock_meter {
+        position: absolute;
+        top: 110px;
+        left: 356px;
+        width: 115px;
+        height: 115px;
+        border: 1px solid #00ff00;
+        border-radius: 50%;
+      }
+
+      /* Simple CSS Analog Clock Hands */
+      .hand {
+        position: absolute;
+        bottom: 50%;
+        left: 50%;
+        transform-origin: bottom center;
+        background: #00ff00;
+        border-radius: 2px;
+      }
+      .hand-hr {
+        width: 4px;
+        height: 30px;
+        z-index: 3;
+      }
+      .hand-min {
+        width: 2px;
+        height: 40px;
+        z-index: 4;
+      }
+      .hand-sec {
+        width: 1px;
+        height: 50px;
+        z-index: 5;
+        background: #00ff00;
+      }
+
+      /* Weather Info (Bottom Right) */
+      #lbl_weather {
+        position: absolute;
+        top: 241px;
+        left: 356px;
+        width: 115px;
+        height: 70px;
+        font-size: 12px;
+        color: var(--text-dark-green);
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+      }
+
+      .weather-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2px;
+      }
+      .w-val {
+        color: var(--text-green);
+        margin-left: 4px;
+      }
+
+      /* Controls */
+      .controls {
+        margin-top: 1rem;
         font-size: 0.9rem;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #aaa;
       }
     </style>
   </head>
   <body>
     <div class="header">
-      <h1>ESP32-S3 UI Previewer</h1>
-      <p>화면을 클릭하면 테마가 전환됩니다 (LV_EVENT_CLICKED)</p>
+      <h1>ESP32-S3 Log Viewer</h1>
     </div>
 
     <div class="device-container">
-      <div class="cam-lens"></div>
       <div id="screen">
-        <div id="hello-label" class="lv-label">HELLO WORLD!</div>
-        <div id="title-label" class="lv-label">ESP32-S3 SYSTEM</div>
-        <div id="ok-icon" class="lv-label">✔</div>
-        <div id="status-label" class="lv-label">
-          Hardware Driver Initialized Successful
+        <!-- Row 1 -->
+        <div id="lbl_title">ESP32-S3 MONITOR</div>
+        <div id="lbl_uptime">
+          Uptime: <span class="sys-val" id="val_uptime">0s</span>
         </div>
-        <div class="lv-line" id="line"></div>
-        <div id="dev-info" class="lv-label">
-          Date: 2026-02-08 | Developer: Jinho Jung
+        <div id="box_time">
+          <div id="lbl_time">2026-02-08<br />00:00:00</div>
+        </div>
+
+        <!-- Row 2: System Stats -->
+        <div id="lbl_sys">
+          <span>Heap:</span><span class="sys-val">120,500</span><span class="sys-unit">B</span> <span>Min:</span><span class="sys-val">98,200</span><span class="sys-unit">B</span>
+          <div style="width: 100%"></div>
+          <span>PSRAM:</span><span class="sys-val">4,100,500</span><span class="sys-unit">B</span> <span>RSSI:</span><span class="sys-val">-65</span><span class="sys-unit">dBm</span>
+        </div>
+
+        <!-- Row 3: Log Area -->
+        <div id="log_cont">
+          <div id="lbl_log"></div>
+        </div>
+
+        <!-- Right: Clock -->
+        <div id="clock_meter">
+          <div class="hand hand-hr" id="hand_hr"></div>
+          <div class="hand hand-min" id="hand_min"></div>
+          <div class="hand hand-sec" id="hand_sec"></div>
+        </div>
+
+        <!-- Bottom Right: Weather -->
+        <div id="lbl_weather">
+          <div style="margin-bottom: 4px">
+            Seoul, KR <span class="w-val">24.5 C</span>
+          </div>
+          <div>feel:<span class="w-val">26.0</span></div>
+          <div>hum:<span class="w-val">45%</span></div>
+          <div>wind:<span class="w-val">2.1m/s</span></div>
         </div>
       </div>
     </div>
 
-    <div class="controls">
-      <div class="info-card">
-        <strong>Resolution:</strong> 480 x 320 (Landscape)<br />
-        <strong>Display:</strong> IPS Capacitive Touch
-      </div>
-      <div class="info-card">
-        <strong>Current Mode:</strong> <span id="mode-text">DARK</span><br />
-        <strong>Target:</strong> ESP32-S3-WROOM
-      </div>
-    </div>
+    <div class="controls">* This is a visual simulation of the LVGL UI.</div>
 
     <script>
-      const screen = document.getElementById("screen");
-      const modeText = document.getElementById("mode-text");
+      // Simulation Logic
+      const logEl = document.getElementById("lbl_log");
+      const timeEl = document.getElementById("lbl_time");
+      const uptimeEl = document.getElementById("val_uptime");
 
-      let currentThemeIndex = 0; // 0: DARK, 1: LIGHT, 2: LOW_POWER
-      const themes = ["DARK", "LIGHT", "LOW_POWER"];
+      const handHr = document.getElementById("hand_hr");
+      const handMin = document.getElementById("hand_min");
+      const handSec = document.getElementById("hand_sec");
 
-      const colors = {
-        dark: {
-          bg: "#000000",
-          hello: "#FF4500",
-          title: "#00BFFF",
-          ok: "#00FF00",
-          status: "#00FF00",
-          dev: "#AAAAAA",
-          line: "#444444",
-          brightness: 1.0,
-        },
-        light: {
-          bg: "#FFFFFF",
-          hello: "#D32F2F",
-          title: "#1976D2",
-          ok: "#388E3C",
-          status: "#388E3C",
-          dev: "#616161",
-          line: "#BDBDBD",
-          brightness: 1.0,
-        },
-        low_power: {
-          bg: "#000000",
-          hello: "#331100",
-          title: "#002244",
-          ok: "#00BF00",
-          status: "#004400",
-          dev: "#222222",
-          line: "#111111",
-          brightness: 0.3, // Simulate 10% brightness by reducing opacity/contrast
-        },
-      };
+      // We need to keep track of accumulated uptime for the label
+      let uptimeSec = 0;
 
-      function updateUI() {
-        const themeKey = themes[currentThemeIndex]
-          .toLowerCase()
-          .replace("_", "");
-        const theme =
-          currentThemeIndex === 0
-            ? colors.dark
-            : currentThemeIndex === 1
-              ? colors.light
-              : colors.low_power;
+      // Basic Log Buffer
+      const logs = [
+        "> BOOT",
+        "[I][BOOT]: Display ready",
+        "[I][WIFI]: Connecting MIHO-2.4G",
+        "[I][WIFI]: .",
+        "[I][WIFI]: .",
+        "[I][WIFI]: OK IP:192.168.0.15",
+        "[I][NTP]: Sync started",
+        "[I][OWM]: Seoul 24.5C Clouds",
+      ];
 
-        screen.style.backgroundColor = theme.bg;
-        screen.style.filter = `brightness(${theme.brightness})`;
-
-        document.getElementById("hello-label").style.color = theme.hello;
-        document.getElementById("title-label").style.color = theme.title;
-        document.getElementById("ok-icon").style.color = theme.ok;
-        document.getElementById("status-label").style.color = theme.status;
-        document.getElementById("dev-info").style.color = theme.dev;
-        document.getElementById("line").style.backgroundColor = theme.line;
-
-        const currentMode = themes[currentThemeIndex];
-        modeText.textContent = currentMode;
-
-        if (currentMode === "DARK") modeText.style.color = "#00BFFF";
-        else if (currentMode === "LIGHT") modeText.style.color = "#D32F2F";
-        else modeText.style.color = "#555555";
+      function renderLogs() {
+        // Simple join. Real implementation has a ring buffer char array.
+        logEl.textContent = logs.join("\n");
       }
 
-      screen.addEventListener("click", () => {
-        currentThemeIndex = (currentThemeIndex + 1) % themes.length;
-        updateUI();
-        console.log("Theme changed: " + themes[currentThemeIndex]);
-      });
+      function addLog(msg) {
+        logs.push(msg);
+        if (logs.length > 22) logs.shift(); // Keep approximate fit
+        renderLogs();
+      }
 
-      // Initial setup
-      updateUI();
+      renderLogs();
+
+      // Simulate Log Stream
+      setInterval(() => {
+        const r = Math.random();
+        let msg = "";
+
+        if (r < 0.3) {
+          msg = `[I][MEM]: heap:${120000 + Math.floor(Math.random() * 5000)} min:98000 ps:4100000`;
+        } else if (r < 0.5) {
+          msg = `[I][NET]: rssi:${-40 - Math.floor(Math.random() * 40)} up:${uptimeSec}s`;
+        } else if (r < 0.7) {
+          msg = `[I][RTOS]: tasks:12 tick:${Date.now()}`;
+        } else {
+          msg = `[W][CPU]: temp:${(40 + Math.random() * 10).toFixed(1)}C`;
+        }
+
+        addLog(msg);
+      }, 500);
+
+      // Clock & Uptime Update
+      setInterval(() => {
+        uptimeSec++;
+        uptimeEl.textContent = uptimeSec + "s";
+
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0, 10);
+        const timeStr = now.toTimeString().slice(0, 8);
+        timeEl.innerHTML = `${dateStr}\n${timeStr}`;
+
+        // Analog Clock Calculations
+        const sec = now.getSeconds();
+        const min = now.getMinutes();
+        const hr = now.getHours() % 12;
+
+        const secDeg = sec * 6; // 360 / 60
+        const minDeg = min * 6 + sec * 0.1; // 360 / 60
+        const hrDeg = hr * 30 + min * 0.5; // 360 / 12
+
+        // Rotate hands
+        handSec.style.transform = `rotate(${secDeg}deg)`;
+        handMin.style.transform = `rotate(${minDeg}deg)`;
+        handHr.style.transform = `rotate(${hrDeg}deg)`;
+      }, 1000);
     </script>
   </body>
 </html>

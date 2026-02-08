@@ -4,3 +4,6 @@ build-esp32s3-debug/
 *.bin
 *.elf
 .claude/
+
+# Added by ggshield
+.cache_ggshield

@@ -42,11 +42,74 @@ static lv_meter_indicator_t *needle_hr = NULL;
 static lv_meter_indicator_t *needle_min = NULL;
 static lv_meter_indicator_t *needle_sec = NULL;
 
-static const lv_color_t COLOR_TOP_LABEL = lv_color_hex(0xB3B3B3);   // 30% darker than white
-static const lv_color_t COLOR_TOP_NUM   = lv_color_hex(0xFFFFFF);
-static const lv_color_t COLOR_TOP_UNIT  = lv_color_hex(0x999999);   // 40% darker than white
-static const lv_color_t COLOR_BOT_LABEL = lv_color_hex(0x00B300);   // 30% darker than green
-static const lv_color_t COLOR_BOT_NUM   = lv_color_hex(0x00FF00);
+// --- Theme & Globals ---
+static lv_meter_scale_t *scale = NULL;
+// Loop timers (global for refresh trigger)
+static uint32_t lLog=0, lSys=0, lTime=0, lWeather=0, lProd=0, lWR=0, lLv=0, lNet=0, lTask=0, lHook=0;
+static bool is_dark = true;
+
+typedef struct {
+    lv_color_t bg;
+    lv_color_t top_lbl;
+    lv_color_t top_num;
+    lv_color_t top_unit;
+    lv_color_t bot_lbl;
+    lv_color_t bot_num;
+    lv_color_t log_txt;
+    lv_color_t clock_border;
+    lv_color_t clock_tick;
+    lv_color_t title_txt;
+} Theme_t;
+
+static const Theme_t theme_dark = {
+    .bg = lv_color_hex(0x000000),
+    .top_lbl = lv_color_hex(0xB3B3B3), .top_num = lv_color_hex(0xFFFFFF), .top_unit = lv_color_hex(0x999999),
+    .bot_lbl = lv_color_hex(0x00B300), .bot_num = lv_color_hex(0x00FF00),
+    .log_txt = lv_color_hex(0x00FF00),
+    .clock_border = lv_color_hex(0x008000), .clock_tick = lv_color_hex(0x008000),
+    .title_txt = lv_color_hex(0x00BFFF)
+};
+
+static const Theme_t theme_light = {
+    .bg = lv_color_hex(0xE0E0E0),
+    .top_lbl = lv_color_hex(0x333333), .top_num = lv_color_hex(0x000000), .top_unit = lv_color_hex(0x555555),
+    .bot_lbl = lv_color_hex(0x005500), .bot_num = lv_color_hex(0x00AA00),
+    .log_txt = lv_color_hex(0x000000),
+    .clock_border = lv_color_hex(0x444444), .clock_tick = lv_color_hex(0x444444),
+    .title_txt = lv_color_hex(0x0055FF)
+};
+
+static const Theme_t *curr_theme = &theme_dark;
+
+// Macros for compatibility with existing loop code
+#define COLOR_TOP_LABEL (curr_theme->top_lbl)
+#define COLOR_TOP_NUM   (curr_theme->top_num)
+#define COLOR_TOP_UNIT  (curr_theme->top_unit)
+#define COLOR_BOT_LABEL (curr_theme->bot_lbl)
+#define COLOR_BOT_NUM   (curr_theme->bot_num)
+
+void update_theme() {
+    curr_theme = is_dark ? &theme_dark : &theme_light;
+    lv_obj_set_style_bg_color(lv_scr_act(), curr_theme->bg, 0);
+    if(lbl_title) lv_obj_set_style_text_color(lbl_title, curr_theme->title_txt, 0);
+    if(lbl_time) lv_obj_set_style_text_color(lbl_time, curr_theme->top_num, 0);
+    if(lbl_log) lv_obj_set_style_text_color(lbl_log, curr_theme->log_txt, 0);
+    if(clock_meter) {
+        lv_obj_set_style_border_color(clock_meter, curr_theme->clock_border, 0);
+        if(scale) {
+            lv_meter_set_scale_ticks(clock_meter, scale, 61, 0, 0, curr_theme->clock_tick);
+            lv_meter_set_scale_major_ticks(clock_meter, scale, 15, 4, 15, curr_theme->clock_tick, 10);
+        }
+    }
+    lSys = 0; lWeather = 0;
+    lv_obj_invalidate(lv_scr_act());
+}
+
+static void screen_touch_cb(lv_event_t * e) {
+    ESP_LOGI("TOUCH", "Screen Clicked");
+    is_dark = !is_dark;
+    update_theme();
+}
 
 static void spangroup_clear(lv_obj_t *sg) {
     if (!sg) return;
@@ -230,12 +293,12 @@ void setup() {
 
     // BUILD UI (480x320 landscape)
     bsp_display_lock(0);
-    lv_obj_set_style_bg_color(lv_scr_act(), lv_color_hex(0x000000), 0);
+    lv_obj_set_style_bg_color(lv_scr_act(), curr_theme->bg, 0);
 
     // Row1: title + time
     lbl_title = lv_label_create(lv_scr_act());
     lv_label_set_text(lbl_title, "ESP32-S3 MONITOR");
-    lv_obj_set_style_text_color(lbl_title, lv_color_hex(0x00BFFF), 0);
+    lv_obj_set_style_text_color(lbl_title, curr_theme->title_txt, 0);
     lv_obj_set_style_text_font(lbl_title, &lv_font_montserrat_20, 0);
     lv_obj_set_pos(lbl_title, 8, 2);
 
@@ -257,7 +320,7 @@ void setup() {
 
     lbl_time = lv_label_create(box_time);
     lv_label_set_text(lbl_time, "----.--.--\n--:--:--");
-    lv_obj_set_style_text_color(lbl_time, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(lbl_time, curr_theme->top_num, 0);
     lv_obj_set_style_text_font(lbl_time, &lv_font_montserrat_16, 0);
     lv_obj_set_style_text_align(lbl_time, LV_TEXT_ALIGN_RIGHT, 0);
     lv_obj_set_size(lbl_time, 120, 44);
@@ -293,7 +356,7 @@ void setup() {
     lbl_log = lv_label_create(log_cont);
     lv_obj_set_width(lbl_log, 362);
     lv_label_set_long_mode(lbl_log, LV_LABEL_LONG_WRAP);
-    lv_obj_set_style_text_color(lbl_log, lv_color_hex(0x00FF00), 0);
+    lv_obj_set_style_text_color(lbl_log, curr_theme->log_txt, 0);
     lv_obj_set_style_text_font(lbl_log, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_line_space(lbl_log, 1, 0);
     lv_label_set_text(lbl_log, disp_buf);
@@ -304,12 +367,24 @@ void setup() {
     lv_obj_set_pos(clock_meter, 356, 110);
     lv_obj_set_style_bg_opa(clock_meter, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(clock_meter, 1, 0);
-    lv_obj_set_style_border_color(clock_meter, lv_color_hex(0x00FF00), 0);
+    lv_obj_set_style_border_color(clock_meter, curr_theme->clock_border, 0);
+    lv_obj_set_style_text_opa(clock_meter, LV_OPA_0, LV_PART_TICKS);  // Hide numbers
 
-    lv_meter_scale_t *scale = lv_meter_add_scale(clock_meter);
-    lv_meter_set_scale_ticks(clock_meter, scale, 12, 2, 6, lv_color_hex(0x00FF00));
-    lv_meter_set_scale_major_ticks(clock_meter, scale, 3, 4, 10, lv_color_hex(0x00FF00), 8);
-    lv_meter_set_scale_range(clock_meter, scale, 0, 60, 360, 270);
+    scale = lv_meter_add_scale(clock_meter);
+    lv_meter_set_scale_ticks(clock_meter, scale, 61, 0, 0, curr_theme->clock_tick);
+    lv_meter_set_scale_major_ticks(clock_meter, scale, 15, 4, 15, curr_theme->clock_tick, 10);
+    lv_meter_set_scale_range(clock_meter, scale, 0, 600, 360, 270);
+
+    // Touch event setup for all interactive areas
+    lv_obj_add_flag(lv_scr_act(), LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(lv_scr_act(), screen_touch_cb, LV_EVENT_CLICKED, NULL);
+
+    // Also attach to log container and clock so they don't consume the event without action
+    lv_obj_add_flag(log_cont, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(log_cont, screen_touch_cb, LV_EVENT_CLICKED, NULL);
+
+    lv_obj_add_flag(clock_meter, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(clock_meter, screen_touch_cb, LV_EVENT_CLICKED, NULL);
 
     needle_hr = lv_meter_add_needle_line(clock_meter, scale, 3, lv_color_hex(0x00FF00), -10);
     needle_min = lv_meter_add_needle_line(clock_meter, scale, 2, lv_color_hex(0x00FF00), -5);
@@ -343,7 +418,6 @@ void setup() {
 }
 
 void loop() {
-    static uint32_t lLog=0, lSys=0, lTime=0, lWeather=0, lProd=0, lWR=0, lLv=0, lNet=0, lTask=0, lHook=0;
     static uint32_t pkt=0;
     uint32_t now = millis();
 
@@ -388,10 +462,15 @@ void loop() {
                     int hour = ti.tm_hour % 12;
                     int minute = ti.tm_min;
                     int second = ti.tm_sec;
-                    int hour_pos = hour * 5 + (minute / 12);
+                    
+                    // Range 0-600
+                    int hour_pos = (hour * 50) + (minute * 50) / 60;
+                    int min_pos = minute * 10;
+                    int sec_pos = second * 10;
+
                     lv_meter_set_indicator_value(clock_meter, needle_hr, hour_pos);
-                    lv_meter_set_indicator_value(clock_meter, needle_min, minute);
-                    lv_meter_set_indicator_value(clock_meter, needle_sec, second);
+                    lv_meter_set_indicator_value(clock_meter, needle_min, min_pos);
+                    lv_meter_set_indicator_value(clock_meter, needle_sec, sec_pos);
                 }
                 bsp_display_unlock();
             }

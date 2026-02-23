@@ -3,9 +3,9 @@
 ESP32-S3의 모든 시스템 로그(ESP_LOG) 및 시리얼 출력을 3.5인치 QSPI LCD 화면에 **실시간 터미널** 형태로 보여주는 고성능 모니터링 프로젝트입니다.
 **화면을 터치하면 다크 모드와 라이트 모드가 전환됩니다.**
 
-![Screenshot 1](screenshot/screenshot1.png)
-![Screenshot 2](screenshot/screenshot2.png)
-![Screenshot 3](screenshot/screenshot3.png)
+![Screenshot 1](screenshot/screenshot1_slim.webp)
+![Screenshot 2](screenshot/screenshot2_slim.webp)
+![Screenshot 3](screenshot/screenshot3_slim.webp)
 
 ## ✨ 주요 기능 (Key Features)
 
